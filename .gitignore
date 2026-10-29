@@ -1,0 +1,17 @@
+/Reports/
+/clusters.txt
+/known_hosts
+/known_hosts.*
+/.ssh/
+*.pem
+*.key
+*.pfx
+*.p12
+*.clixml
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db

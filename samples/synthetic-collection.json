@@ -1,0 +1,112 @@
+{
+  "Target": "cluster-east.example.com",
+  "CollectionStatus": "Partial",
+  "Error": null,
+  "StartedAt": "2026-10-28T10:00:00+00:00",
+  "FinishedAt": "2026-10-28T10:00:35+00:00",
+  "Report": {
+    "Release": "NetApp Release 9.16.1P12",
+    "Version": "9.16.1",
+    "VersionOutput": "NetApp Release 9.16.1P12",
+    "SessionMode": "Persistent",
+    "SessionExitCode": 0,
+    "SessionError": null,
+    "SessionStartupStdOut": "SYNTHETIC SAMPLE ONLY. All targets, evidence, and assessments in this file are fictional.",
+    "SessionStartupStdErr": "",
+    "Checks": [
+      {
+        "Name": "Cluster connectivity diagnostics started",
+        "Category": "General",
+        "Command": "network interface check cluster-connectivity start -node *",
+        "Diagnostic": true,
+        "Status": "Collected",
+        "Health": "ReviewRequired",
+        "AssessmentOutcome": "info",
+        "Reason": "Synthetic example: diagnostic start acknowledged; this is not evidence of completion.",
+        "StdOut": "2 entries were acted on.",
+        "StdErr": ""
+      },
+      {
+        "Name": "Unhealthy cluster nodes",
+        "Category": "General",
+        "Command": "cluster show -health false",
+        "Diagnostic": false,
+        "Status": "Collected",
+        "Health": "NoFindings",
+        "Reason": "Synthetic example: no nodes matched the unhealthy-node query.",
+        "StdOut": "There are no entries matching your query.",
+        "StdErr": ""
+      },
+      {
+        "Name": "NODAR check",
+        "Category": "Security",
+        "Command": "version -v",
+        "Diagnostic": false,
+        "Status": "Collected",
+        "Health": "Successful",
+        "EncryptionBuild": "DAR",
+        "Reason": "Synthetic example: recognized DAR-capable build. Encryption enablement was not checked.",
+        "StdOut": "NetApp Release 9.16.1P12 <1O>",
+        "StdErr": ""
+      },
+      {
+        "Name": "System health alerts",
+        "Category": "Storage",
+        "Command": "system health alert show",
+        "Diagnostic": false,
+        "Status": "Error",
+        "Health": "Unknown",
+        "Reason": "Synthetic example: command was not authorized; health was not established.",
+        "StdOut": "Error: not authorized for that command",
+        "StdErr": ""
+      },
+      {
+        "Name": "LIF(s) are not at their home port",
+        "Category": "Network",
+        "Command": "network interface show -is-home false",
+        "Diagnostic": false,
+        "Status": "Collected",
+        "Health": "ReviewRequired",
+        "AssessmentOutcome": "findings",
+        "Reason": "Synthetic example: one LIF is away from its home port. Confirm whether the placement is intentional.",
+        "StdOut": "Vserver    Logical Interface    Current Node    Current Port    Is Home\n---------- -------------------- --------------- --------------- -------\nsvm-demo   lif-demo             example-node-02 e0c             false\n1 entry was displayed.",
+        "StdErr": ""
+      },
+      {
+        "Name": "Volumes not online or restricted",
+        "Category": "Data",
+        "Command": "volume show -state !online,!restricted -size !\"-\"",
+        "Diagnostic": false,
+        "Status": "Collected",
+        "Health": "ReviewRequired",
+        "AssessmentOutcome": "findings",
+        "Reason": "Synthetic example: an offline volume was returned. Confirm the intended volume state.",
+        "StdOut": "Vserver    Volume       State\n---------- ------------ -------\nsvm-demo   vol-archive  offline\n1 entry was displayed.",
+        "StdErr": ""
+      },
+      {
+        "Name": "Unhealthy SnapMirror relationships",
+        "Category": "Data",
+        "Command": "snapmirror show -healthy false",
+        "Diagnostic": false,
+        "Status": "Collected",
+        "Health": "NoFindings",
+        "Reason": "Synthetic example: no unhealthy relationships were returned; expected coverage was not established.",
+        "StdOut": "There are no entries matching your query.",
+        "StdErr": ""
+      },
+      {
+        "Name": "Cluster connectivity packet loss",
+        "Category": "General",
+        "Command": "network interface check cluster-connectivity show -node * -date-time >10m -instance",
+        "Diagnostic": true,
+        "Status": "Collected",
+        "Health": "ReviewRequired",
+        "AssessmentOutcome": "review",
+        "Reason": "Synthetic example: diagnostic results are incomplete; no passing assessment can be made.",
+        "StdOut": "Warning: Connectivity diagnostics are still in progress.",
+        "StdErr": ""
+      }
+    ]
+  }
+}
