@@ -21,12 +21,12 @@
 
 | Field | Value |
 |---|---|
-| Version | 0.2 |
+| Version | 0.3 |
 | Last Updated | 2026-10-30 |
 | Language | Windows PowerShell 5.1 / PowerShell 7 |
 | Platform | Windows |
 
-See the [release history](README.md#release-history) for version 0.2 changes and version 0.1, the initial release. The tool release version is separate from the collected ONTAP release and required PowerShell version.
+See the [release history](README.md#release-history) for version 0.3 changes and earlier releases, including version 0.1, the initial release. The tool release version is separate from the collected ONTAP release and required PowerShell version.
 
 ## Description
 
@@ -104,7 +104,7 @@ Dashboard totals for all health checks, passes, findings, needs review, and coll
 
 `Results Explained`, aligned right below the dashboard, opens a compact explanation of Passed (green), Findings (yellow), Needs review (violet), Collection error (red), Skipped, and Information. It opens on mouse hover or keyboard focus; click or tap pins it open. It can be dismissed with its close button, Escape, or an outside click. The same scrollable popup works on mobile without navigating away or requiring internet access. It distinguishes a returned condition from uncertain evidence and from a check that could not complete, and notes that collection completeness is not an overall health verdict.
 
-The `Results` section groups evidence by cluster, then collapsible category, then expandable individual check. Expand all and Collapse all controls appear above the first cluster and below the last cluster; they toggle every cluster, category, and individual check currently shown in Results. Cluster and category badges use worst-recorded severity in this order: collection error (red), needs review (violet), findings (yellow), passed (green). Skipped checks make the rollup require review; information-only groups remain neutral blue. Rollups use the full recorded cluster/category, not only currently visible checks, so filtering to passes cannot hide a known issue behind a green category badge. Each heading states how many checks are shown out of its total, and the badge tooltip explains its scope. Evidence links expand the containing cluster and category automatically.
+The `Results` section groups evidence by cluster, then collapsible category, then expandable individual check. Expand all and Collapse all controls appear above the first cluster and below the last cluster; they toggle every cluster, category, and individual check currently shown in Results. Cluster and category badges use worst-recorded severity in this order: collection error (red), needs review (violet), findings (yellow), passed (green). Checks with `Status = Skipped` and `Health = NotApplicable` do not raise roll-up severity. Other skipped checks still require review. Information-only groups and groups containing only not-applicable skips remain neutral blue, not passed. Individual skipped results and skipped counts remain unchanged. Rollups use the full recorded cluster/category, not only currently visible checks, so filtering to passes cannot hide a known issue behind a green category badge. Each heading states how many checks are shown out of its total, and the badge tooltip explains its scope. Evidence links expand the containing cluster and category automatically.
 
 `Export filtered results` is the primary CSV action. It exports one row per check matching the selected clusters, result types, categories, and search, regardless of which sections are expanded. Rows include the target, source/illustrative-data label, category, check name, command, displayed result, assessment, collection status, stored health, timestamps, stdout, and stderr. Matching cluster-level collection errors are included as separate `Collection error` rows even if no checks were collected. No matches produces a header-only CSV.
 

@@ -120,6 +120,8 @@ try {
     Assert-Condition ($simulatorReport.Inventory.IsSimulator -and $simulatorReport.Inventory.PlatformNotice -match 'not a supported production-ready platform' -and $simulatorHtml.Contains('renderPlatformNotices()')) 'Generated report lost the SIMBOX warning.'
     $simulatorCheck = $simulatorReport.Checks | Where-Object Command -eq 'system controller environment show -status !ok'
     Assert-Condition ($simulatorCheck.Status -eq 'Skipped' -and $simulatorCheck.Health -eq 'NotApplicable' -and $simulatorCheck.StdOut -match 'not supported') 'Generated report lost the platform skip or raw evidence.'
+    Assert-Condition ($simulatorHtml.Contains("checks.filter(check=>!(check.Status==='Skipped'&&check.Health==='NotApplicable')).map(check=>check.outcome)") -and $simulatorHtml.Contains("outcomes.has('review')||outcomes.has('skipped')?'review'") -and $simulatorHtml.Contains('Not-applicable skips do not raise severity; other skips require review.')) 'Severity roll-ups must exclude explicitly not-applicable skips while retaining review for unexpected skips.'
+    Assert-Condition ($simulatorHtml.Contains('<meta name="application-version" content="0.3">')) 'Generated report is missing application version 0.3.'
     Write-Host 'PASS: generated SIMBOX report retains platform warning, skipped status and raw evidence'
     Assert-Condition (($reports.Target -join ',') -eq 'cluster1,cluster2,cluster3.example.com,192.0.2.10,2001:db8::1') 'Input order or address parsing changed.'
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $output 'summary.csv'))) 'The runner still creates a summary CSV.'

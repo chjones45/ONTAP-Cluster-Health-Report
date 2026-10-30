@@ -4,10 +4,11 @@
 .SYNOPSIS
 Generates a self-contained HTML report from saved ONTAP collections.
 .NOTES
-Version: 0.2
+Version: 0.3
 Updated: 2026-10-30
-Uses the report template with SIMBOX platform notices and clearer check evidence
-boundaries. Version 0.1 was the initial release.
+Corrects category and cluster severity roll-ups: platform-inapplicable skips
+do not trigger Needs review; unexpected skips still do.
+Version 0.1 was the initial release.
 See README.md, Release History, for release details.
 #>
 [CmdletBinding()]

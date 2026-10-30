@@ -4,10 +4,11 @@
 .SYNOPSIS
 Collects and assesses ONTAP health-check evidence over SSH.
 .NOTES
-Version: 0.2
+Version: 0.3
 Updated: 2026-10-30
-Adds node-model inventory, SIMBOX identification, and platform-aware General
-check skips. Version 0.1 was the initial release.
+Repository release version; collector behavior is unchanged in 0.3.
+Report roll-ups now distinguish platform-inapplicable skips from incomplete checks.
+Version 0.1 was the initial release.
 See README.md, Release History, for release details.
 #>
 Set-StrictMode -Version Latest

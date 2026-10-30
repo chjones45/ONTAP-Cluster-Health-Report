@@ -19,10 +19,10 @@ JSON is always retained if HTML generation fails. No summary CSV is created.
 .PARAMETER OpenReport
 Opens the generated HTML report using the system's default application.
 .NOTES
-Version: 0.2
+Version: 0.3
 Updated: 2026-10-30
-Adds SIMBOX platform notices, platform-aware General check skips, and clearer
-report evidence boundaries. Version 0.1 was the initial release.
+Corrects report severity roll-ups for platform-inapplicable skipped checks.
+Version 0.1 was the initial release.
 See README.md, Release History, for release details.
 #>
 [CmdletBinding()]
