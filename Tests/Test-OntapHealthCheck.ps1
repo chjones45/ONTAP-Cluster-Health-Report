@@ -53,6 +53,8 @@ try {
         $script:testVerboseVersion = 'NetApp Release 9.16.1P12: <1O>'
         $script:testCalls = @()
         $script:testNodeCount = 2
+        $script:testModel = 'AFF-A250'
+        $script:testPlatformError = ''
         $script:testSwitchCount = 0
         $script:testSwitchInventoryUnknown = $false
         $script:testHaConfigured = 'true'
@@ -72,6 +74,7 @@ try {
             if ($Command[0] -eq 'cluster identity show') { $output = "Cluster UUID:`r`n12345678-1234-1234-1234-123456789abc`r`nCluster Name: test-cluster`r`n" }
             elseif ($Command[0] -eq 'storage disk show -state !spare,!present -container-type !remote,!mediator' -and $null -ne $script:testDiskOutput) { $output = $script:testDiskOutput }
             elseif ($Command[0] -eq 'storage pool show -is-healthy false' -and $null -ne $script:testPoolOutput) { $output = $script:testPoolOutput }
+            elseif ($Command[0] -eq 'system node show -fields model') { $output = "node model`r`n---- -----`r`nnode1 $script:testModel`r`nnode2 $script:testModel`r`n2 entries were displayed.`r`n" }
             elseif ($Command[0] -eq 'system node show -fields node') {
                 $nodeRows = @('Node', '----------')
                 if ($null -ne $script:testNodeCount) { for ($nodeIndex = 1; $nodeIndex -le $script:testNodeCount; $nodeIndex++) { $nodeRows += "node$nodeIndex" } }
@@ -92,6 +95,11 @@ try {
             $errorText = $null
             $exitCode = 0
             $status = 'Collected'
+            if ($Command[0] -eq 'system controller environment show -status !ok' -and $script:testPlatformError) {
+                $output = $script:testPlatformError
+                $errorText = $output
+                $status = 'Error'
+            }
             if ($Command[0] -eq 'storage errors show') {
                 switch ($script:testFailure) {
                     'cli' { $output = 'Error: command failed: not authorized'; $errorText = $output; $status = 'Error' }
@@ -222,7 +230,25 @@ try {
         }
     }
     $calls = & $module { $script:testCalls }
-    Assert-Condition (($calls[1..4] -join "`n") -ceq "cluster identity show`nsystem node show -fields node`nsystem switch ethernet show -type cluster-network`nstorage aggregate show-spare-disks" -and $calls[5] -like '*cluster-connectivity start*' -and $calls[-1] -like '*cluster-connectivity show*') 'Inventory capture or diagnostic start/results ordering failed.'
+    Assert-Condition (($calls[1..5] -join "`n") -ceq "cluster identity show`nsystem node show -fields node`nsystem node show -fields model`nsystem switch ethernet show -type cluster-network`nstorage aggregate show-spare-disks" -and $calls[6] -like '*cluster-connectivity start*' -and $calls[-1] -like '*cluster-connectivity show*') 'Inventory capture or diagnostic start/results ordering failed.'
+    foreach ($case in @(
+        @{ Model = 'SIMBOX'; Output = "Error: show failed: This command is not`r`n supported on this platform."; Status = 'Skipped' },
+        @{ Model = 'simbox'; Output = 'Error: cmd not supported for virtual platform'; Status = 'Skipped' },
+        @{ Model = 'AFF-A250'; Output = 'Error: command not supported on this platform.'; Status = 'Error' },
+        @{ Model = 'SIMBOX'; Output = 'Error: not authorized'; Status = 'Error' }
+    )) {
+        & $module { param($case) $script:testModel = $case.Model; $script:testPlatformError = $case.Output } $case
+        $platformReport = Invoke-OntapHealthCheck @parameters
+        $platformCheck = $platformReport.Checks | Where-Object Command -eq 'system controller environment show -status !ok'
+        Assert-Condition ($platformCheck.Status -eq $case.Status -and $platformCheck.StdOut -eq $case.Output) 'Platform applicability changed an unrelated failure or lost raw evidence.'
+        Assert-Condition ($platformReport.Inventory.IsSimulator -eq ($case.Model -ieq 'SIMBOX')) 'SIMBOX model detection failed.'
+        Assert-Condition ($platformReport.Inventory.NodeModels.Count -eq 1 -and $platformReport.Inventory.NodeModels[0] -eq $case.Model) 'Node model parsing included table headers or separators.'
+        if ($case.Status -eq 'Skipped') {
+            Assert-Condition ($platformCheck.Health -eq 'NotApplicable' -and $platformCheck.Reason -match 'Not applicable to platform' -and $platformReport.Inventory.PlatformNotice -match 'not a supported production-ready platform') 'Simulator notice or platform skip explanation is missing.'
+        }
+    }
+    & $module { $script:testModel = 'AFF-A250'; $script:testPlatformError = '' }
+    Write-Host 'PASS: SIMBOX notice and explicit platform skips preserve unrelated collection errors'
     $expectedOrder = @(foreach ($phase in @('Start', 'Check', 'Results')) {
         $catalog | Where-Object Phase -eq $phase | Select-Object -ExpandProperty Command
     })

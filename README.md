@@ -1,5 +1,7 @@
 # ONTAP Health Check (PowerShell)
 
+**Version 0.2** | Updated 2026-10-30 | [Release history](#release-history)
+
 Collect health-check evidence from **NetApp ONTAP 9** clusters over SSH and generate one interactive, self-contained HTML report. Review General, Security, Storage, Network, and Data checks across one or more clusters, inspect the CLI evidence, and export filtered results to CSV.
 
 No remediation or persistent configuration changes are performed. Diagnostics run by default and may initiate tests or refresh diagnostic state. Results are a point-in-time assessment, not an overall cluster-health verdict.
@@ -64,9 +66,27 @@ Running `.\ONTAPHealthCheck.ps1` without arguments prompts for cluster names or 
 
 Your generated report works offline and can be shared as a single HTML file. It includes cluster summaries, clickable totals, filters, expandable check evidence, and CSV exports. Reports contain sensitive infrastructure data: store and share real reports securely, and do not commit them to GitHub. JSON is removed after successful HTML generation unless you use `-KeepAllOutputFiles`.
 
+Node model `SIMBOX` is flagged as a Virtual ONTAP Simulator, a test/lab platform that is not supported for production. On SIMBOX-only clusters, General checks explicitly rejected by ONTAP as unsupported on the platform are marked **Skipped**, with a **Not applicable to platform** explanation and their raw responses retained. Other collection failures remain errors. Older saved collections without node-model inventory must be recollected to enable this detection.
+
 ## Detailed Reference
 
 See [README - Detailed.md](README%20-%20Detailed.md) for SSH trust options, unattended runs, output retention and recovery, check assessments, diagnostic caveats, security details, and regression tests.
+
+## Release History
+
+### 0.2 - 2026-10-30
+
+- Added node-model inventory and clear warnings identifying SIMBOX as a Virtual ONTAP Simulator, not a supported production-ready platform.
+- Marked General checks explicitly rejected as platform-unsupported on SIMBOX-only clusters as **Skipped**, with a **Not applicable to platform** explanation and raw evidence retained. Other collection failures remain errors.
+- Improved expanded check boundaries so neighboring results, including hardware-assisted failover and storage-port checks, are clearly separated. Saved evidence for those checks was already independent.
+- Added regression coverage for simulator detection, platform applicability, and generated reports; verified the report layout on desktop and mobile.
+- Added release metadata to production scripts and modules. This is the tool's release version, separate from the collected ONTAP version and required PowerShell version.
+
+Existing collections without node-model inventory must be recollected for simulator detection. The standalone ONTAP.Ssh module's behavior is unchanged; the runner uses ONTAP.HealthCheck.
+
+### 0.1
+
+Initial release: SSH-based ONTAP health-check collection, per-cluster evidence, and a self-contained interactive HTML report.
 
 ## License
 

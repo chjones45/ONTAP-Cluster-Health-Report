@@ -21,10 +21,12 @@
 
 | Field | Value |
 |---|---|
-| Version | Unreleased |
-| Last Updated | 2026-10-28 |
+| Version | 0.2 |
+| Last Updated | 2026-10-30 |
 | Language | Windows PowerShell 5.1 / PowerShell 7 |
 | Platform | Windows |
+
+See the [release history](README.md#release-history) for version 0.2 changes and version 0.1, the initial release. The tool release version is separate from the collected ONTAP release and required PowerShell version.
 
 ## Description
 

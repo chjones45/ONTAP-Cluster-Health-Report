@@ -1,4 +1,15 @@
 #Requires -Version 5.1
+
+<#
+.SYNOPSIS
+Collects and assesses ONTAP health-check evidence over SSH.
+.NOTES
+Version: 0.2
+Updated: 2026-10-30
+Adds node-model inventory, SIMBOX identification, and platform-aware General
+check skips. Version 0.1 was the initial release.
+See README.md, Release History, for release details.
+#>
 Set-StrictMode -Version Latest
 
 function ConvertTo-OntapSshArgument {
@@ -475,6 +486,7 @@ function Invoke-OntapHealthCheckCollection {
     $releaseLabel = $releaseLabels -join '; '
     $identityRaw = Invoke-OntapSshCommand @connection -Command 'cluster identity show' -Advanced -ContinueOnCommandError
     $nodeInventoryRaw = Invoke-OntapSshCommand @connection -Command 'system node show -fields node' -Advanced -ContinueOnCommandError
+    $modelInventoryRaw = Invoke-OntapSshCommand @connection -Command 'system node show -fields model' -Advanced -ContinueOnCommandError
     $switchInventoryRaw = Invoke-OntapSshCommand @connection -Command 'system switch ethernet show -type cluster-network' -Advanced -ContinueOnCommandError
     $spareDiskInventoryRaw = Invoke-OntapSshCommand @connection -Command 'storage aggregate show-spare-disks' -Advanced -ContinueOnCommandError
     $identityUsable = $identityRaw.Status -eq 'Collected' -and [string]::IsNullOrWhiteSpace($identityRaw.StdErr) -and $identityRaw.StdOut -notmatch '(?im)^\s*(Warning:|Error:|Info:)'
@@ -500,7 +512,18 @@ function Invoke-OntapHealthCheckCollection {
             if ($switchCountMatch.Success) { $clusterSwitchCount = [int]$switchCountMatch.Groups['count'].Value }
         }
     }
+    $nodeModels = @()
+    if ($modelInventoryRaw.Status -eq 'Collected' -and [string]::IsNullOrWhiteSpace($modelInventoryRaw.StdErr) -and $modelInventoryRaw.StdOut -notmatch '(?im)^\s*(Warning:|Error:|Info:)') {
+        $nodeModels = @([regex]::Matches($modelInventoryRaw.StdOut, '(?im)^[\t ]*[a-z0-9][\w.-]*[\t ]+(?<model>[a-z0-9][\w-]*)[\t ]*\r?$') | Where-Object { $_.Groups['model'].Value -ine 'model' } | ForEach-Object { $_.Groups['model'].Value } | Select-Object -Unique)
+    }
+    $isSimulator = $nodeModels -icontains 'SIMBOX'
     $inventory = [pscustomobject]@{
+        NodeModels = $nodeModels
+        IsSimulator = $isSimulator
+        PlatformNotice = if ($isSimulator) { 'SIMBOX detected: Virtual ONTAP Simulator. This is a test/lab platform, not a supported production-ready platform.' } else { $null }
+        ModelInventoryCommand = 'system node show -fields model'
+        ModelInventoryOutput = $modelInventoryRaw.StdOut
+        ModelInventoryStatus = $modelInventoryRaw.Status
         ClusterName = $clusterName
         ClusterUuid = $clusterUuid
         IdentityStatus = if ($null -ne $clusterName -and $null -ne $clusterUuid) { 'Collected' } else { 'ReviewRequired' }
@@ -554,6 +577,12 @@ function Invoke-OntapHealthCheckCollection {
             $status = $raw.Status
             $reason = $raw.Error
             $transportFailure = $Session.Broken -or ($raw.Status -eq 'Error' -and $raw.ExitCode -eq 255)
+            if ($isSimulator -and $nodeModels.Count -eq 1 -and $check.Category -eq 'General' -and $status -eq 'Error' -and -not $transportFailure -and [string]::IsNullOrWhiteSpace($raw.StdErr) -and $raw.StdOut -match '(?is)\b(?:command|cmd) (?:is )?not\s+supported (?:on|for) (?:this|virtual) platform\b' -and $raw.StdOut -notmatch '(?i)not authorized|permission denied|timed? out') {
+                $status = 'Skipped'
+                $health = 'NotApplicable'
+                $assessmentOutcome = 'skipped'
+                $reason = 'Not applicable to platform: SIMBOX Virtual ONTAP Simulator. ONTAP explicitly reported this General check as unsupported on this platform. Raw response retained.'
+            }
             if ($check.Phase -eq 'Start') {
                 $connectivityStarted = $status -eq 'Collected'
             }

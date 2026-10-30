@@ -107,6 +107,7 @@ public static class OntapSshTestClient {
                     if (mode == "collector-clierror") { Console.Write("Error: command failed: not authorized\r\n"); }
                     else if (command == "cluster identity show") { Console.Write("Cluster UUID:\r\n12345678-1234-1234-1234-123456789abc\r\nCluster Name: test-cluster\r\n"); }
                     else if (command == "system node show -fields node") { Console.Write("Node\r\n----------\r\nnode1\r\nnode2\r\n2 entries were displayed.\r\n"); }
+                    else if (command == "system node show -fields model") { Console.Write("node model\r\n---- -----\r\nnode1 AFF-A250\r\nnode2 AFF-A250\r\n2 entries were displayed.\r\n"); }
                     else if (command == "system switch ethernet show -type cluster-network") { Console.Write("There are no entries matching your query.\r\n"); }
                     else if (command == "storage aggregate show-spare-disks") { Console.Write("Original Owner: node1\r\nPool0 Spare Pool\r\n1.0.10 SSD solid-state 894GB 894GB zeroed\r\n"); }
                     else if (command == "cluster ha show") { Console.Write("High-Availability Configured: true\r\n"); }
@@ -195,7 +196,7 @@ public static class OntapSshTestClient {
     Assert-Condition (@($report.Checks | Where-Object Status -eq 'Skipped').Count -eq ($catalog.Count - $supportedCatalog.Count)) 'Default collection skipped the wrong number of checks.'
     $sessionLog = @(Get-Content -LiteralPath $env:ONTAP_SSH_TEST_SESSION_LOG)
     $executedChecks = @($sessionLog | Where-Object { $_ -notin @('SESSION', 'version', 'set -privilege advanced -confirmations off', 'set -rows 0', 'exit') })
-    $expectedCommands = @('cluster identity show', 'system node show -fields node', 'system switch ethernet show -type cluster-network', 'storage aggregate show-spare-disks') + @(foreach ($phase in @('Start', 'Check', 'Results')) {
+    $expectedCommands = @('cluster identity show', 'system node show -fields node', 'system node show -fields model', 'system switch ethernet show -type cluster-network', 'storage aggregate show-spare-disks') + @(foreach ($phase in @('Start', 'Check', 'Results')) {
         $supportedCatalog | Where-Object Phase -eq $phase | Select-Object -ExpandProperty Command
     })
     Assert-Condition (($executedChecks -join "`n") -ceq ($expectedCommands -join "`n")) 'Supported catalog commands were omitted, duplicated or executed out of order.'

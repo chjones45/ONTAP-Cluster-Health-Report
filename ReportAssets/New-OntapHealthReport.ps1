@@ -1,4 +1,15 @@
 #Requires -Version 5.1
+
+<#
+.SYNOPSIS
+Generates a self-contained HTML report from saved ONTAP collections.
+.NOTES
+Version: 0.2
+Updated: 2026-10-30
+Uses the report template with SIMBOX platform notices and clearer check evidence
+boundaries. Version 0.1 was the initial release.
+See README.md, Release History, for release details.
+#>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string[]]$ReportPath,

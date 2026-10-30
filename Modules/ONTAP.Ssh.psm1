@@ -1,4 +1,16 @@
 #Requires -Version 5.1
+
+<#
+.SYNOPSIS
+Provides the standalone ONTAP SSH and health-check module.
+.NOTES
+Version: 0.2
+Updated: 2026-10-30
+Repository release version; standalone module behavior is unchanged in 0.2.
+Version 0.1 was the initial release.
+Use ONTAP.HealthCheck.psm1 for the runner's current platform-aware collector.
+See README.md, Release History, for release details.
+#>
 Set-StrictMode -Version Latest
 
 function ConvertTo-OntapSshArgument {

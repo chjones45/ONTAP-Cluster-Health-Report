@@ -82,6 +82,8 @@ try {
             $response = 'There are no entries matching your query.'
             if ($Command[0] -eq 'cluster identity show') { $clusterName = $script:runnerClusterNames[$Target]; if (-not $clusterName) { $clusterName = 'test-cluster' }; $response = "Cluster UUID:`r`n12345678-1234-1234-1234-123456789abc`r`nCluster Name: $clusterName`r`n" }
             elseif ($Command[0] -eq 'system node show -fields node') { $response = "Node`r`n----------`r`nnode1`r`nnode2`r`n2 entries were displayed.`r`n" }
+            elseif ($Command[0] -eq 'system node show -fields model') { $model = if ($Target -eq 'simulator.example.com') { 'SIMBOX' } else { 'AFF-A250' }; $response = "node model`r`n---- -----`r`nnode1 $model`r`nnode2 $model`r`n2 entries were displayed.`r`n" }
+            elseif ($Target -eq 'simulator.example.com' -and $Command[0] -eq 'system controller environment show -status !ok') { $status = 'Error'; $response = 'Error: show failed: This command is not supported on this platform.'; $failure = $response }
             elseif ($Command[0] -eq 'storage aggregate show-spare-disks') { $response = "Original Owner: node1`r`nPool0 Spare Pool`r`n1.0.10 SSD solid-state 894GB 894GB zeroed`r`n" }
             elseif ($Command[0] -eq 'cluster ha show') { $response = 'High-Availability Configured: true' }
             elseif ($Command[0] -eq 'network options switchless-cluster show') { $response = 'Enable Switchless Cluster: true' }
@@ -109,6 +111,16 @@ try {
     Assert-Condition ($reports[0].StartedAt -match '[+-]\d{2}:\d{2}$' -and [datetimeoffset]::Parse($reports[0].StartedAt).Offset -eq [datetimeoffset]::Now.Offset) 'Wrapper timestamp did not preserve runner local time and offset.'
     Assert-Condition ($reports[0].PSObject.Properties.Name -notcontains 'StartedAtUtc') 'Wrapper kept misleading UTC field names.'
     Write-Host 'PASS: stale in-memory module replaced by the current module file'
+    $simulatorOutput = Join-Path $testDirectory 'simulator'
+    $simulatorReports = @(& $runner -Clusters 'simulator.example.com' -Credential $credential -NonInteractive -OutputDirectory $simulatorOutput -PassThru -KeepAllOutputFiles)
+    $simulatorHtml = Get-Content -LiteralPath (Join-Path $simulatorOutput 'ONTAP-Health-Report.html') -Raw
+    $simulatorEncoded = [regex]::Match($simulatorHtml, "atob\('(?<data>[A-Za-z0-9+/=]+)'\)").Groups['data'].Value
+    $simulatorPayload = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($simulatorEncoded)) | ConvertFrom-Json
+    $simulatorReport = $simulatorPayload.Reports[0].Collection.Report
+    Assert-Condition ($simulatorReport.Inventory.IsSimulator -and $simulatorReport.Inventory.PlatformNotice -match 'not a supported production-ready platform' -and $simulatorHtml.Contains('renderPlatformNotices()')) 'Generated report lost the SIMBOX warning.'
+    $simulatorCheck = $simulatorReport.Checks | Where-Object Command -eq 'system controller environment show -status !ok'
+    Assert-Condition ($simulatorCheck.Status -eq 'Skipped' -and $simulatorCheck.Health -eq 'NotApplicable' -and $simulatorCheck.StdOut -match 'not supported') 'Generated report lost the platform skip or raw evidence.'
+    Write-Host 'PASS: generated SIMBOX report retains platform warning, skipped status and raw evidence'
     Assert-Condition (($reports.Target -join ',') -eq 'cluster1,cluster2,cluster3.example.com,192.0.2.10,2001:db8::1') 'Input order or address parsing changed.'
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $output 'summary.csv'))) 'The runner still creates a summary CSV.'
     $jsonPaths = @(Get-ChildItem -LiteralPath $output -Filter '*.json' | Sort-Object Name | Select-Object -ExpandProperty FullName)
