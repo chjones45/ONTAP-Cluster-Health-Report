@@ -121,7 +121,7 @@ try {
     $simulatorCheck = $simulatorReport.Checks | Where-Object Command -eq 'system controller environment show -status !ok'
     Assert-Condition ($simulatorCheck.Status -eq 'Skipped' -and $simulatorCheck.Health -eq 'NotApplicable' -and $simulatorCheck.StdOut -match 'not supported') 'Generated report lost the platform skip or raw evidence.'
     Assert-Condition ($simulatorHtml.Contains("checks.filter(check=>!(check.Status==='Skipped'&&check.Health==='NotApplicable')).map(check=>check.outcome)") -and $simulatorHtml.Contains("outcomes.has('review')||outcomes.has('skipped')?'review'") -and $simulatorHtml.Contains('Not-applicable skips do not raise severity; other skips require review.')) 'Severity roll-ups must exclude explicitly not-applicable skips while retaining review for unexpected skips.'
-    Assert-Condition ($simulatorHtml.Contains('<meta name="application-version" content="0.3">')) 'Generated report is missing application version 0.3.'
+    Assert-Condition ($simulatorHtml.Contains('<meta name="application-version" content="0.4">')) 'Generated report is missing application version 0.4.'
     Write-Host 'PASS: generated SIMBOX report retains platform warning, skipped status and raw evidence'
     Assert-Condition (($reports.Target -join ',') -eq 'cluster1,cluster2,cluster3.example.com,192.0.2.10,2001:db8::1') 'Input order or address parsing changed.'
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $output 'summary.csv'))) 'The runner still creates a summary CSV.'
@@ -276,24 +276,25 @@ try {
     Assert-Condition ($failure -match 'already exists') 'Existing reports could be overwritten.'
     Write-Host "PASS: input validation, unattended prompts and overwrite protection ($($PSVersionTable.PSEdition))"
 
-    $promptState = @{ ChoiceAnswers = $null; ChoiceMessages = @(); CredentialMessages = @(); CancelCredential = $false }
+    $promptState = @{ ChoiceAnswers = $null; ChoiceMessages = @(); CredentialPrompts = @(); UserCount = 0; CancelCredential = $false }
     Set-Item Function:Read-Host -Value ({
-        param([string]$Prompt)
-        $promptState.ChoiceMessages += $Prompt
-        if ($promptState.ChoiceAnswers.Count -eq 0) { throw 'Unexpected interactive choice prompt.' }
-        return $promptState.ChoiceAnswers.Dequeue()
-    }.GetNewClosure())
-    Set-Item Function:Get-Credential -Value ({
-        param([string]$Message)
-        $promptState.CredentialMessages += $Message
-        if ($promptState.CancelCredential) { return $null }
-        $userName = 'prompt-user-' + $promptState.CredentialMessages.Count
-        return New-Object System.Management.Automation.PSCredential($userName, (ConvertTo-SecureString 'test-only' -AsPlainText -Force))
+        param([string]$Prompt, [switch]$AsSecureString)
+        if ($Prompt -like 'Use the same username*') {
+            $promptState.ChoiceMessages += $Prompt
+            if ($promptState.ChoiceAnswers.Count -eq 0) { throw 'Unexpected interactive choice prompt.' }
+            return $promptState.ChoiceAnswers.Dequeue()
+        }
+        $promptState.CredentialPrompts += [pscustomobject]@{ Prompt = $Prompt; Secure = [bool]$AsSecureString }
+        if ($AsSecureString) { return ConvertTo-SecureString 'test-only' -AsPlainText -Force }
+        $promptState.UserCount++
+        if ($promptState.CancelCredential) { return '' }
+        return 'prompt-user-' + $promptState.UserCount
     }.GetNewClosure())
     foreach ($mode in @('shared', 'separate', 'single', 'cancel')) {
         $promptState.ChoiceAnswers = New-Object 'System.Collections.Generic.Queue[string]'
         $promptState.ChoiceMessages = @()
-        $promptState.CredentialMessages = @()
+        $promptState.CredentialPrompts = @()
+        $promptState.UserCount = 0
         $promptState.CancelCredential = $mode -eq 'cancel'
         $promptTargets = @(if ($mode -eq 'single') { '192.0.2.10' } else { 'cluster1'; 'cluster2.example.com' })
         if ($mode -eq 'shared') { $promptState.ChoiceAnswers.Enqueue('Y') }
@@ -314,18 +315,19 @@ try {
             Assert-Condition ($null -eq $failure -and $promptReports.Count -eq $promptTargets.Count) "Interactive credential mode failed: $mode / $failure"
             $users = @(& (Get-Module ONTAP.HealthCheck | Where-Object Path -eq $fixtureModulePath) { $script:runnerUsers })
             if ($mode -eq 'shared') {
-                Assert-Condition ($promptState.CredentialMessages.Count -eq 1 -and $promptState.CredentialMessages[0] -match 'all listed clusters') 'Shared credentials were not requested once with the correct message.'
+                Assert-Condition ($promptState.UserCount -eq 1 -and $promptState.CredentialPrompts.Count -eq 2 -and $promptState.CredentialPrompts[0].Prompt -match 'all listed clusters') 'Shared credentials were not requested once with the correct message.'
                 Assert-Condition (($users -join ',') -eq 'prompt-user-1,prompt-user-1') 'Shared credentials were not reused.'
             }
             elseif ($mode -eq 'separate') {
                 Assert-Condition ($promptState.ChoiceMessages.Count -eq 2) 'Invalid Y/N input was not retried.'
-                Assert-Condition (($promptState.CredentialMessages -join ',') -eq 'ONTAP SSH credentials for cluster1,ONTAP SSH credentials for cluster2.example.com') 'Per-cluster prompts did not contain the supplied target names.'
+                Assert-Condition (($promptState.CredentialPrompts[0].Prompt -match 'cluster1') -and ($promptState.CredentialPrompts[2].Prompt -match 'cluster2.example.com')) 'Per-cluster prompts did not contain the supplied target names.'
                 Assert-Condition (($users -join ',') -eq 'prompt-user-1,prompt-user-2') 'The wrong credential was supplied to a cluster.'
             }
             else {
-                Assert-Condition ($promptState.ChoiceMessages.Count -eq 0 -and $promptState.CredentialMessages[0] -match '192.0.2.10') 'Single-cluster invocation asked an unnecessary reuse question or omitted its target.'
+                Assert-Condition ($promptState.ChoiceMessages.Count -eq 0 -and $promptState.UserCount -eq 1 -and $promptState.CredentialPrompts[0].Prompt -match '192.0.2.10') 'Single-cluster invocation asked an unnecessary reuse question or omitted its target.'
             }
         }
+        Assert-Condition (@($promptState.CredentialPrompts | Where-Object { $_.Prompt -eq 'Password' -and $_.Secure }).Count -eq ($promptState.UserCount - [int]$promptState.CancelCredential)) 'A password prompt did not use secure inline input.'
         Write-Host "PASS: interactive credential mode $mode (fake credentials only)"
     }
     $reportGenerator = Join-Path $testDirectory 'ReportAssets\New-OntapHealthReport.ps1'

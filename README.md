@@ -1,6 +1,6 @@
 # ONTAP Health Check (PowerShell)
 
-**Version 0.3** | Updated 2026-10-30 | [Release history](#release-history)
+**Version 0.4** | Updated 2026-11-06 | [Release history](#release-history)
 
 Collect health-check evidence from **NetApp ONTAP 9** clusters over SSH and generate one interactive, self-contained HTML report. Review General, Security, Storage, Network, and Data checks across one or more clusters, inspect the CLI evidence, and export filtered results to CSV.
 
@@ -73,6 +73,10 @@ Node model `SIMBOX` is flagged as a Virtual ONTAP Simulator, a test/lab platform
 See [README - Detailed.md](README%20-%20Detailed.md) for SSH trust options, unattended runs, output retention and recovery, check assessments, diagnostic caveats, security details, and regression tests.
 
 ## Release History
+
+### 0.4 - 2026-11-06
+
+- Replaced Windows PowerShell credential dialogs with inline console prompts. Passwords are entered as secure strings and are not displayed.
 
 ### 0.3 - 2026-10-30
 

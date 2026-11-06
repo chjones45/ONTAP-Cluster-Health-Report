@@ -19,8 +19,8 @@ JSON is always retained if HTML generation fails. No summary CSV is created.
 .PARAMETER OpenReport
 Opens the generated HTML report using the system's default application.
 .NOTES
-Version: 0.3
-Updated: 2026-10-30
+Version: 0.4
+Updated: 2026-11-06
 Corrects report severity roll-ups for platform-inapplicable skipped checks.
 Version 0.1 was the initial release.
 See README.md, Release History, for release details.
@@ -47,6 +47,16 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+function Read-OntapConsoleCredential {
+    param([Parameter(Mandatory = $true)][string]$Message)
+
+    $userName = Read-Host -Prompt "$Message`nUsername"
+    if ([string]::IsNullOrWhiteSpace($userName)) { return $null }
+    $password = Read-Host -Prompt 'Password' -AsSecureString
+    return [System.Management.Automation.PSCredential]::new($userName, $password)
+}
+
 $requiredRuntimeFiles = @(
     'ReportAssets\New-OntapHealthReport.ps1',
     'Modules\ONTAP.HealthCheck.psm1',
@@ -96,7 +106,7 @@ if ($null -eq $Credential) {
     }
     if (-not $perClusterCredentials) {
         $credentialMessage = if ($targets.Count -gt 1) { 'ONTAP SSH credentials (used for all listed clusters)' } else { "ONTAP SSH credentials for $($targets[0])" }
-        $Credential = Get-Credential -Message $credentialMessage
+        $Credential = Read-OntapConsoleCredential -Message $credentialMessage
         if ($null -eq $Credential) { throw 'Credential entry was cancelled.' }
     }
 }
@@ -122,7 +132,8 @@ $summary = @()
 for ($index = 0; $index -lt $targets.Count; $index++) {
     $target = $targets[$index]
     if ($perClusterCredentials) {
-        $connection.Credential = Get-Credential -Message "ONTAP SSH credentials for $target"
+        $connection.Credential = Read-OntapConsoleCredential -Message "ONTAP SSH credentials for $target"
+        if ($null -eq $connection.Credential) { throw "Credential entry was cancelled for $target." }
         if ($null -eq $connection.Credential) { throw "Credential entry was cancelled for $target." }
     }
     Write-Host ('[{0}/{1}] Collecting {2}' -f ($index + 1), $targets.Count, $target)

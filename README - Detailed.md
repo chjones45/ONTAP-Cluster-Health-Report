@@ -21,12 +21,12 @@
 
 | Field | Value |
 |---|---|
-| Version | 0.3 |
-| Last Updated | 2026-10-30 |
+| Version | 0.4 |
+| Last Updated | 2026-11-06 |
 | Language | Windows PowerShell 5.1 / PowerShell 7 |
 | Platform | Windows |
 
-See the [release history](README.md#release-history) for version 0.3 changes and earlier releases, including version 0.1, the initial release. The tool release version is separate from the collected ONTAP release and required PowerShell version.
+See the [release history](README.md#release-history) for version 0.4 changes and earlier releases, including version 0.1, the initial release. The tool release version is separate from the collected ONTAP release and required PowerShell version.
 
 ## Description
 
@@ -142,7 +142,9 @@ Use `-OutputDirectory` to select a new directory. Existing directories are rejec
 For unattended use or to reuse an in-memory credential:
 
 ```powershell
-$credential = Get-Credential
+$userName = Read-Host 'Username'
+$password = Read-Host 'Password' -AsSecureString
+$credential = [System.Management.Automation.PSCredential]::new($userName, $password)
 $results = .\ONTAPHealthCheck.ps1 -Clusters 'cluster1,cluster2' -Credential $credential -NonInteractive -OutputDirectory 'C:\SecureReports\run-001' -PassThru
 $results | Select-Object Target, CollectionStatus, Error
 $results[0].Report.Checks | Format-List Command, Status, Health, Reason, StdOut, StdErr
@@ -177,7 +179,9 @@ Run from the repository directory. Supply a bare DNS name or IP address, not a U
 
 ```powershell
 Import-Module .\Modules\ONTAP.HealthCheck.psm1 -Force
-$credential = Get-Credential -Message 'ONTAP SSH credentials'
+$userName = Read-Host 'Username'
+$password = Read-Host 'Password' -AsSecureString
+$credential = [System.Management.Automation.PSCredential]::new($userName, $password)
 $results = Test-OntapSshConnection -Target cluster-mgmt.example.com -Credential $credential
 $results | Format-List Command, ExitCode, StdOut, StdErr
 ```

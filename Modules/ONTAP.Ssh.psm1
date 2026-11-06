@@ -4,14 +4,23 @@
 .SYNOPSIS
 Provides the standalone ONTAP SSH and health-check module.
 .NOTES
-Version: 0.3
-Updated: 2026-10-30
-Repository release version; standalone module behavior is unchanged in 0.3.
+Version: 0.4
+Updated: 2026-11-06
+Repository release version; credentials are prompted inline in the console.
 Version 0.1 was the initial release.
 Use ONTAP.HealthCheck.psm1 for the runner's current platform-aware collector.
 See README.md, Release History, for release details.
 #>
 Set-StrictMode -Version Latest
+
+function Read-OntapConsoleCredential {
+    param([Parameter(Mandatory = $true)][string]$Message)
+
+    $userName = Read-Host -Prompt "$Message`nUsername"
+    if ([string]::IsNullOrWhiteSpace($userName)) { return $null }
+    $password = Read-Host -Prompt 'Password' -AsSecureString
+    return [System.Management.Automation.PSCredential]::new($userName, $password)
+}
 
 function ConvertTo-OntapSshArgument {
     param([AllowEmptyString()][string]$Argument)
@@ -77,7 +86,7 @@ function Invoke-OntapSshCommand {
     $sshCommand = Get-Command -Name $SshExecutable -CommandType Application -ErrorAction Stop | Select-Object -First 1
     if ($null -eq $Credential) {
         if ($NonInteractive) { throw 'Specify -Credential when using -NonInteractive.' }
-        $Credential = Get-Credential -Message "ONTAP SSH credentials for $Target"
+        $Credential = Read-OntapConsoleCredential -Message "ONTAP SSH credentials for $Target"
         if ($null -eq $Credential) { throw 'Credential entry was cancelled.' }
     }
     if ([string]::IsNullOrWhiteSpace($Credential.UserName) -or $Credential.UserName -match '[\r\n\x00]') {

@@ -4,8 +4,8 @@
 .SYNOPSIS
 Generates a self-contained HTML report from saved ONTAP collections.
 .NOTES
-Version: 0.3
-Updated: 2026-10-30
+Version: 0.4
+Updated: 2026-11-06
 Corrects category and cluster severity roll-ups: platform-inapplicable skips
 do not trigger Needs review; unexpected skips still do.
 Version 0.1 was the initial release.
